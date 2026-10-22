@@ -289,3 +289,9 @@ class BookingCardV2(Bookings):
     def test_copy_is_icon_button(self):
         self.assertIn('aria-label="{{ b.copyAria }}"', self.app)
         self.assertNotIn('{{ b.copyLabel }}', self.app)
+
+
+class SenderCopy(Bookings):
+    def test_sender_copy_button(self):
+        self.assertIn('aria-label="{{ b.senderAria }}"', self.app)
+        self.assertIn('onClick="{{ b.copySender }}"', self.app)

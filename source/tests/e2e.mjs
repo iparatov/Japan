@@ -121,6 +121,16 @@ await t('брони: подписи кнопок не обрезаются', asy
   await c.close();
 });
 
+
+await t('брони: кнопка копирует отправителя письма', async () => {
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Tokyo', permissions: ['clipboard-read', 'clipboard-write'] });
+  const { p, c } = await open('2026-10-25T12:00:00+09:00', { ctx });
+  await bookings(p);
+  await p.locator('[aria-label="Скопировать отправителя: Webket"]').click(); await p.waitForTimeout(300);
+  assert.equal(await p.evaluate(() => navigator.clipboard.readText()), 'Webket');
+  await c.close();
+});
+
 await t('офлайн: после первого открытия работает без сети', async () => {
   const http = await import('node:http'); const fs = await import('node:fs');
   const dir = path.dirname(path.resolve(process.argv[2] || 'dist/index.html'));
