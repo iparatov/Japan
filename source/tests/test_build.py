@@ -1,0 +1,177 @@
+import unittest, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+import build
+
+
+class Hyperlink(unittest.TestCase):
+    def test_formula(self):
+        self.assertEqual(build.hyperlink('=HYPERLINK("https://x.y/a","Открыть")'), ('Открыть', 'https://x.y/a'))
+
+    def test_plain(self):
+        self.assertEqual(build.hyperlink('Текст'), ('Текст', None))
+
+
+class Booking(unittest.TestCase):
+    def test_kinds(self):
+        k = build.book_kind
+        self.assertEqual(k('Нет.'), 'none')
+        self.assertEqual(k('Стол не бронируется. Приоритетный вход'), 'none')
+        self.assertEqual(k('Да, через Tabelog или по телефону 03-6233-9633.'), 'online')
+        self.assertEqual(k('На двоих — по телефону 03-6455-5263.'), 'phone')
+        self.assertEqual(k('Только курс. По субботам — ¥6 600/чел.'), 'course')
+        self.assertEqual(k('После 17:00 — только курс.'), 'course')
+        self.assertEqual(k('Да, только стол, от 1 человека.'), 'online')
+
+
+class Walk(unittest.TestCase):
+    def test_walk(self):
+        self.assertEqual(build.walk('4 мин от ICHIRAN'), (4, 'ICHIRAN'))
+        self.assertEqual(build.walk('18 мин от Koun-tei*'), (18, 'Koun-tei'))
+        self.assertEqual(build.walk(''), (None, None))
+
+
+class Restaurants(unittest.TestCase):
+    rows = [  # (ref, name, in_base, timed, extra)
+        dict(ref=40, name='Yakiuo Ishikawa — Ginza Rinkaro', alt=False, base=None, timed=True, book='Да.', walk=''),
+        dict(ref=40, name='↳ MASUMI Ginza 7-chome — план Б к Yakiuo', alt=True, base=True, timed=False, book='Да, бронь только стола.', walk='9 мин от Yakiuo'),
+        dict(ref=40, name='Ginza Kagari Honten', alt=False, base=False, timed=False, book='Нет.', walk='12 мин от Yakiuo'),
+        dict(ref=40, name='↳ Soranoiro Ginza Honten', alt=True, base=False, timed=False, book='Да, через Tabelog.', walk='16 мин от Kagari'),
+    ]
+
+    def test_promoted_main_and_dropped_old(self):
+        g = build.rest_group(self.rows)
+        self.assertEqual(g['main']['name'], 'MASUMI Ginza 7-chome')
+        self.assertEqual([b['name'] for b in g['backups']], ['Ginza Kagari Honten', 'Soranoiro Ginza Honten'])
+
+    def test_walk_only_from_current_main(self):
+        g = build.rest_group(self.rows)
+        self.assertTrue(all('walk' not in b for b in g['backups']))
+
+    def test_walk_kept_when_from_main(self):
+        rows = [dict(ref=14, name='ICHIRAN Shinjuku Kabukicho', alt=False, base=None, timed=True, book='Нет.', walk=''),
+                dict(ref=14, name='↳ Kuramu Kabukicho — план Б к ICHIRAN', alt=True, base=False, timed=False, book='Да, онлайн.', walk='1 мин от ICHIRAN')]
+        g = build.rest_group(rows)
+        self.assertEqual(g['backups'][0]['walk'], 1)
+        self.assertEqual(g['backups'][0]['name'], 'Kuramu Kabukicho')
+
+
+class Copy(unittest.TestCase):
+    def test_override_and_drop(self):
+        c = build.Copy({'Короткий переход.': '', 'Приоритетная покупка часов.': 'Главная покупка дня — часы.'})
+        self.assertEqual(c('Короткий переход.'), '')
+        self.assertEqual(c('Приоритетная покупка часов.'), 'Главная покупка дня — часы.')
+        self.assertEqual(c('—'), '')
+        self.assertEqual(c('Неизвестная заметка.'), 'Неизвестная заметка.')
+        self.assertEqual(c.unknown, ['Неизвестная заметка.'])
+
+    def test_title_prefixes(self):
+        t = build.clean_title
+        self.assertEqual(t('Ужин: Gion Duck Noodles — план А'), 'Ужин — Gion Duck Noodles')
+        self.assertEqual(t('ПЛАН Б — Ginza Kagari (Soba)'), 'Ginza Kagari (Soba)')
+
+
+if __name__ == '__main__':
+    unittest.main()
+
+
+class BuiltData(unittest.TestCase):
+    """Проверки на собранных данных (нужен src/table.xlsx)."""
+    @classmethod
+    def setUpClass(cls):
+        import json, re
+        html = build.build()
+        man, names, files = build.unbundle(html)
+        app = files[names[build.APP]].decode()
+        cls.days = json.loads(re.search(r'^  static DAYS = (.*);$', app, re.M).group(1))
+        cls.text = json.dumps(cls.days, ensure_ascii=False)
+        cls.app, cls.card = app, files[names[build.CARD]].decode()
+        cls.ds = next(b for b in files.values() if b.startswith(b'/* @ds-bundle')).decode()
+
+    def test_no_service_text(self):
+        bad = r'НЕ СУММИРОВАТЬ|по просьбе пользователя|по ссылке пользователя|по присланной связке|прежние часы рейса|вынесен[а-я]* в отдельную строку|из удалённого резерва|↳|ПЛАН А:|согласован|проверен[а-я]* карточк|«[^»]+ — маршруты», строка|Google Maps по'
+        import re
+        found = sorted(set(m.group(0) for m in re.finditer(bad, self.text)))
+        self.assertEqual(found, [])
+
+    def test_masumi_replaced_yakiuo(self):
+        d = self.days[1]
+        titles = [i['title'] for i in d['items']]
+        self.assertTrue(any('MASUMI' in t for t in titles))
+        self.assertFalse(any('Yakiuo' in t for t in titles))
+
+    def test_every_meal_with_backups_has_names(self):
+        for d in self.days:
+            for it in d['items']:
+                for b in it.get('backups', []):
+                    self.assertNotIn('план Б к', b['name'])
+
+
+class Price(unittest.TestCase):
+    def test_price(self):
+        p = build.price
+        self.assertEqual(p('¥1 000–1 999'), '¥1 000–1 999')
+        self.assertEqual(p('Отзывы: ¥20 000–29 999; заявлено ¥6 000–7 999'), '¥20 000–29 999')
+        self.assertEqual(p('Заявлено ¥1 000–1 999; по отзывам ужин до ¥999'), 'до ¥999')
+        self.assertEqual(p('Обед по отзывам ¥3–4 тыс.; ужин ¥4–5 тыс.'), '¥3 000–4 000')
+        self.assertEqual(p('Средний чек не указан; онигири ¥330–990 за штуку'), '¥330–990')
+        self.assertEqual(p('Не указан'), '')
+        self.assertEqual(p('Завтрак ¥4 000'), '¥4 000')
+
+
+class RowMatch(unittest.TestCase):
+    def rows(self, *titles, date='31.10, сб'):
+        return {i + 2: {'date': (date, None), 'title': (t, None), 'meal': ('—', None)} for i, t in enumerate(titles)}
+
+    def test_row_shift_keeps_item(self):
+        rows = self.rows('Новая строка', 'TISSOT Boutique Ginza')
+        it = {'id': 'r2', 'title': 'TISSOT Boutique Ginza', 'type': 'place'}
+        self.assertEqual(build.find_row(it, rows, '31.10', set()), 3)
+
+    def test_edited_title_same_row_same_type(self):
+        rows = self.rows('Ужин — MASUMI')
+        rows[2]['meal'] = ('Ужин', None)
+        it = {'id': 'r2', 'title': 'Ужин в Yakiuo', 'type': 'food'}
+        self.assertEqual(build.find_row(it, rows, '31.10', set()), 2)
+
+    def test_gone(self):
+        rows = self.rows('Что-то другое')
+        it = {'id': 'r2', 'title': 'TISSOT Boutique Ginza', 'type': 'food'}
+        self.assertIsNone(build.find_row(it, rows, '31.10', set()))
+
+
+class Excluded(BuiltData):
+    def test_excluded_plan_b_removed(self):
+        it = next(i for d in self.days for i in d['items'] if 'Gion Duck' in i['title'] and i['type'] == 'food')
+        self.assertNotIn('planB', it)
+        self.assertEqual(it['title'], 'Ужин — Gion Duck Noodles')
+
+
+class NewRows(BuiltData):
+    def test_restaurant_on_new_row(self):
+        """Ресторан привязывается и к пункту, которого не было в прототипе (id n…)."""
+        it = next(i for d in self.days for i in d['items'] if i['title'] == 'Ужин — Sushi Tofuro Nishi-Shinjuku 7-chome')
+        self.assertTrue(it['id'].startswith('n'))
+        self.assertEqual(it.get('mainName'), 'Sushi Tofuro Nishi-Shinjuku 7-chome')
+
+    def test_restaurants_only_on_food(self):
+        for d in self.days:
+            for i in d['items']:
+                if i.get('rest') or i.get('backups'):
+                    self.assertEqual(i['type'], 'food', i['title'])
+
+
+class PaletteA(BuiltData):
+    """Вариант A из Color Study: выбранный день и чипы — --primary, «Сделано» — --chart-2, шапка дня — --accent."""
+    def test_day_pill(self):
+        self.assertIn("bg: selected ? 'var(--primary)'", self.app)
+        self.assertIn('background:var(--primary); transform:translateX', self.app)
+
+    def test_day_head(self):
+        self.assertIn('background:var(--accent); border-radius:var(--r-card); padding:18px 16px 18px 20px', self.app)
+
+    def test_done(self):
+        self.assertIn("checkBg: done ? 'var(--chart-2)'", self.card)
+
+    def test_chip(self):
+        self.assertIn("background: active ? 'var(--primary)'", self.ds)
