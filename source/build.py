@@ -318,7 +318,43 @@ def build_days(days, wf, wv, copy, report):
         d['items'] = [it for _, it in sorted(d.pop('_new'), key=lambda x: x[0])]
         d['total'] = len(d['items'])
     attach_restaurants(days, rows, read_restaurants(wf, wv), copy, report, row_of)
+    merge_cond(days)
+    card_text(days, report)
+    for d in days:  # ссылки-кнопки переходов: только на билет или расписание, не на поиск
+        for it in d['items']:
+            if 'trip.com/trains/asia/list' in (it.get('link') or {}).get('url', ''): it.pop('link')
+            if it['title'] == 'Kintetsu Kyoto → Kintetsu-Nara':
+                it['link'] = {'label': 'Открыть Kintetsu e-ticket', 'url': 'https://www.ticket.kintetsu.co.jp/vs/en/T/TZZ/TZZ10.do?op=tDisplayVisitorMenu#vs-ticketinfo'}
     return days
+
+
+def card_text(days, report):
+    """Чистка текстов карточек по правилу «Важно» (22.10): src/card_text.json — «дата | название» → поле → [было, стало].
+    Правка применяется, только если текст в данных всё ещё «было»; если таблица поменялась — в отчёт, текст из таблицы."""
+    edits = json.loads((ROOT / 'src/card_text.json').read_text(encoding='utf-8'))
+    seen = set()
+    for d in days:
+        for it in d['items'] + (d.get('alt') or {}).get('items', []):
+            key = d['date'] + ' | ' + it['title']
+            for f, (was, now) in edits.get(key, {}).items():
+                seen.add(key)
+                if (it.get(f) or '') != was:
+                    report.append(f'Тексты: «{key}», поле {f} — в таблице другой текст, правка не применена'); continue
+                if now: it[f] = now
+                else: it.pop(f, None)
+    for key in edits.keys() - seen:
+        report.append(f'Тексты: пункт «{key}» не найден — правка не применена')
+
+
+def merge_cond(days):
+    """«Учесть» (cond) больше не отдельная строка: вливаем в «Важно» (note), без повторов."""
+    for d in days:
+        for it in d['items'] + (d.get('alt') or {}).get('items', []):
+            c = (it.pop('cond', '') or '').strip()
+            if not c: continue
+            n = (it.get('note') or '').strip()
+            if norm(c) in norm(n): continue
+            it['note'] = (n + ' ' + c).strip() if n else c
 
 
 def check_wish(app, wf, wv, report):
@@ -334,13 +370,6 @@ def check_wish(app, wf, wv, report):
         if w is None: report.append(f'Вишлист: в таблице новая позиция «{model or what}» — в приложении её нет'); continue
         y = re.sub(r'[^\d.]', '', yen)
         if y and float(y) != w.get('yen'): report.append(f'Вишлист: цена «{w["title"]}» в таблице ¥{yen}, в приложении ¥{w.get("yen")}')
-
-
-BOOK_FIX = [  # время поездов теперь есть в маршруте
-    ("line:'Kyoto → Nara · время в билете'", "line:'Kyoto → Nara · 08:00–08:34', s:'08:00', e:'08:34'"),
-    ("line:'Nara → Kyoto · время в билете'", "line:'Nara → Kyoto · 16:25–17:01', s:'16:25', e:'17:01'"),
-    ("line:'Kyoto → Tokyo · время в билете'", "line:'Kyoto → Tokyo · 17:30–19:45', s:'17:30', e:'19:45'"),
-]
 
 
 # ---------- логика ----------
@@ -441,6 +470,101 @@ PALETTE_DS = [  # чип фильтра (компонент дизайн-сис�
 ]
 
 
+# ---------- карточки мест (22.10, правила «было / стало») ----------
+# Порядок: описание → часы → «Важно» (!) → Сделано/Пропущено → На карте (+ⓘ) → остальные факты → План Б.
+# Служебные строки «нужна сеть» / «Откроется в Google Maps» убраны; «Учесть» влито в «Важно» (merge_cond).
+CARD_UI = [
+ [
+  "      netNote: offline ? 'Нет сети. Ссылки откроются, когда появится связь' : (it.link && !it.mapUrl && !it.routeUrl ? 'Откроется в браузере · нужна сеть' : 'Откроется в Google Maps · нужна сеть'),\n",
+  ""
+ ],
+ [
+  "<sc-if value=\"{{ hasDesc }}\"><p style=\"margin:0; font:var(--type-small); color:var(--text-body)\">{{ desc }}</p></sc-if>",
+  "<sc-if value=\"{{ hasDesc }}\"><p style=\"margin:0; font:var(--type-small); color:var(--text-body)\">{{ desc }}</p></sc-if>\n          <sc-if value=\"{{ hasHours }}\"><div style=\"display:grid; grid-template-columns:16px auto minmax(0,1fr); column-gap:8px; align-items:baseline; font:var(--type-small)\"><x-import component-from-global-scope=\"DesignSystem_30197c.Icon\" name=\"clock\" size=\"{{ 14 }}\" style=\"{{ quietNudge }}\" hint-size=\"14px,14px\"></x-import><span style=\"color:var(--text-quiet)\">Часы работы</span><span style=\"color:var(--text-strong)\">{{ hours }}</span></div></sc-if>"
+ ],
+ [
+  "              <span style=\"display:flex; align-items:center; gap:6px; font:var(--type-caption); color:var(--text-quiet)\">\n                <x-import component-from-global-scope=\"DesignSystem_30197c.Icon\" name=\"{{ netIcon }}\" size=\"{{ 13 }}\" hint-size=\"13px,13px\"></x-import>{{ netNote }}\n              </span>\n",
+  "",
+  2
+ ],
+ [
+  "    if (it.hours) facts.push({ icon: 'clock', k: 'Часы работы', v: it.hours });\n",
+  ""
+ ],
+ [
+  "    if (it.cond) facts.push({ icon: 'info', k: 'Учесть', v: it.cond });\n",
+  ""
+ ],
+ [
+  "      noteLabel: it.critical ? 'Важно:' : '',\n      noteIcon: it.critical ? 'triangle-alert' : 'sticky-note',",
+  "      noteLabel: 'Важно:',\n      noteIcon: it.critical ? 'triangle-alert' : 'circle-alert',\n      hours: it.hours, hasHours: !!it.hours, quietNudge: { color: 'var(--text-quiet)', transform: 'translateY(2px)' },"
+ ]
+]
+APP_UI2 = [
+ ["name=\"wifi\" size=\"{{ 13 }}\" hint-size=\"13px,13px\"></x-import>нужна сеть</span>", "name=\"wifi\" size=\"{{ 13 }}\" hint-size=\"13px,13px\"></x-import>онлайн</span>"],
+ [
+  ">На сайте ↗ · нужна сеть</x-import>",
+  ">На сайте ↗</x-import>"
+ ],
+ [
+  "            <span style=\"font:var(--type-caption); color:var(--text-quiet)\">Карта, WhatsApp и Tabelog открываются при наличии сети</span>\n",
+  ""
+ ],
+ [
+  "try { navigator.clipboard && navigator.clipboard.writeText(b.bookingNo); } catch (e) {}",
+  "try { navigator.clipboard && navigator.clipboard.writeText(b.bookingNo).catch(() => {}); } catch (e) {}"
+ ]
+]
+
+# ---------- брони ----------
+# Данные — src/bookings.json (из писем и подтверждений); прототипный static BOOK заменяется целиком.
+# Карточка: тип и название → когда → ячейки → номер брони (Скопировать) → Предъявить → Гости → Письмо → Важно → кнопки.
+BOOK_UI = [
+    ((ROOT / 'src/book_card_old.html').read_text(encoding='utf-8'), (ROOT / 'src/book_card.html').read_text(encoding='utf-8')),
+    ("        cta: attention ? 'Открыть сайт брони' : b.kind === 'hotel' ? 'Открыть бронь' : (b.src === 'сайт' ? 'Открыть билет' : 'Открыть билет в ' + b.src),\n        net: offline ? 'Нет сети — откроется, когда появится связь' : (b.kind === 'hotel' || attention || b.src === 'сайт' ? 'Сайт брони' : b.src) + ' · нужна сеть' });",
+     "        hasNo: !!b.bookingNo, noLabel: b.noLabel || 'Номер брони', copyAria: 'Скопировать номер брони ' + (b.bookingNo || ''), copyIcon: S.bCopied === b.id ? 'check' : 'copy',\n        hasSeg: !!(b.segments && b.segments.length), segs: (b.segments || []).map(t => ({ t })), hasBag: !!b.baggage,\n        copy: () => { try { navigator.clipboard && navigator.clipboard.writeText(b.bookingNo); } catch (e) {} this.setState({ bCopied: b.id }); clearTimeout(this.bct); this.bct = setTimeout(() => this.setState({ bCopied: null }), 1600); },\n        hasShow: !!b.show, hasSeats: !!b.seats, hasSender: !!b.sender, hasImp: !!b.important, nudge: { transform: 'translateY(2px)', flex: 'none' },\n        hasUrl: !!b.url, hasMap: !!b.mapUrl, hasBtns: !!(b.url || b.mapUrl), btnCols: 'minmax(0,1fr)',  // кнопки друг под другом: «Открыть бронь в Booking» в полстроки не влезает\n        urlLabel: b.urlLabel || 'Открыть билет', openUrl: () => b.url && window.open(b.url, '_blank', 'noopener'), openMap: () => b.mapUrl && window.open(b.mapUrl, '_blank', 'noopener') });"),
+    ("ticket: ['ticket', 'Билет'] };", "ticket: ['ticket', 'Билет'], flight: ['plane', 'Перелёт'] };"),
+    ("const bChipDefs = [['all', 'Все'], ['train', 'Поезда'], ['bus', 'Автобусы'], ['hotel', 'Отели'], ['ticket', 'Билеты'], ['attention', 'Не куплено · ' + attn.length], ['confirm', 'Подтвердить']];",
+     "const bChipDefs = [['all', 'Все'], ['flight', 'Перелёты'], ['train', 'Поезда'], ['bus', 'Автобусы'], ['hotel', 'Отели'], ['ticket', 'Билеты'], ['attention', 'Не куплено · ' + attn.length], ['confirm', 'Подтвердить']].filter(([k]) => k === 'all' || (k === 'attention' ? attn.length > 0 : k === 'confirm' ? B.some(b => b.st === 'confirm') : B.some(b => b.kind === k)));"),
+    ("    const bGroups = [];\n    fl.forEach(b => {\n      let g = bGroups.find(x => x.day === b.day);\n      if (!g) { g = { day: b.day, label: Component.WD[b.day].toUpperCase() + ', ' + D[b.day].date, items: [], allPast: true }; bGroups.push(g); }",
+     "    const bGroups = [], bPastGroups = [];\n    fl.forEach(b => {\n      const lst = isPast(b) ? bPastGroups : bGroups;\n      const label = b.groupLabel || Component.WD[b.day].toUpperCase() + ', ' + D[b.day].date;\n      let g = lst.find(x => x.label === label);\n      if (!g) { g = { day: b.day, label, items: [], allPast: true, isGroup: true }; lst.push(g); }"),
+    ("cells: b.cells.map(([k, v]) => ({ k, v }))",
+     "cells: b.cells.map(([k, v, d]) => ({ k: d ? k + ' · ' + d : k, v }))"),
+    ("attention, ok: !attention,",
+     "attention, ok: false,"),
+    ("    bGroups.forEach(g => { g.opacity = g.allPast ? 'var(--opacity-disabled)' : 1; });",
+     "    bGroups.forEach(g => { g.opacity = g.allPast ? 'var(--opacity-disabled)' : 1; });\n    // прошедшие брони — свёрнуты в конце списка\n    bPastGroups.forEach(g => { g.opacity = 'var(--opacity-disabled)'; });\n    const bPastN = bPastGroups.reduce((n, g) => n + g.items.length, 0);\n    if (bPastN) bGroups.push({ isToggle: true, label: (S.bPast ? 'Скрыть прошедшие · ' : 'Прошедшие · ') + bPastN, toggle: () => this.setState({ bPast: !S.bPast }) }, ...(S.bPast ? bPastGroups : []));"),
+    ("bBoughtLine: 'Куплено ' + bBoughtN + ' из ' + B.length + ' броней',",
+     "bBoughtLine: bBoughtN < B.length ? 'Куплено ' + bBoughtN + ' из ' + B.length : '',"),
+    ("<span style=\"font:var(--type-caption); color:var(--text-quiet); padding:0 4px; font-variant-numeric:tabular-nums\">{{ bBoughtLine }}</span>",
+     "<sc-if value=\"{{ bBoughtLine }}\"><span style=\"font:var(--type-caption); color:var(--text-quiet); padding:0 4px; font-variant-numeric:tabular-nums\">{{ bBoughtLine }}</span></sc-if>"),
+    ("<sc-for list=\"{{ bGroups }}\" as=\"g\" hint-placeholder-count=\"3\">\n          <div style=\"display:flex; flex-direction:column; gap:10px; padding-top:8px\">",
+     "<sc-for list=\"{{ bGroups }}\" as=\"g\" hint-placeholder-count=\"3\">\n          <sc-if value=\"{{ g.isToggle }}\"><button onClick=\"{{ g.toggle }}\" style=\"display:flex; align-items:center; justify-content:center; min-height:44px; margin-top:8px; border:none; border-radius:var(--r-control); background:var(--secondary); color:var(--text-body); font:600 15px/1.2 var(--font-sans); cursor:pointer\">{{ g.label }}</button></sc-if>\n          <sc-if value=\"{{ g.isGroup }}\"><div style=\"display:flex; flex-direction:column; gap:10px; padding-top:8px\">"),
+    ("            </sc-for>\n          </div>\n        </sc-for>",
+     "            </sc-for>\n          </div></sc-if>\n        </sc-for>"),
+]
+
+
+def bookings(days):
+    """src/bookings.json → массив для static BOOK."""
+    return json.loads((ROOT / 'src/bookings.json').read_text(encoding='utf-8'))['items']
+
+
+def add_icons(files):
+    """Иконки, которых нет в офлайн-наборе дизайн-системы (иначе компонент тянет их с unpkg — без сети пусто)."""
+    import urllib.parse
+    uid = next(u for u, b in files.items() if b.startswith(b'window.__DS_ICONS={'))
+    s = files[uid].decode()
+    extra = []
+    for f in sorted((ROOT / 'src/icons').glob('*.svg')):
+        if '"%s":' % f.stem in s[:200000]: continue
+        svg = re.sub(r'<!--.*?-->', '', f.read_text(encoding='utf-8'), flags=re.S)
+        svg = re.sub(r'\s+', ' ', svg).strip()
+        extra.append('"%s":"data:image/svg+xml;utf8,%s"' % (f.stem, urllib.parse.quote(svg, safe='')))
+    if extra: files[uid] = s.replace('window.__DS_ICONS={', 'window.__DS_ICONS={' + ','.join(extra) + ',', 1).encode()
+
+
+
 # ---------- офлайн ----------
 SW = """// Офлайн: всё приложение — один index.html, кладём его в кэш.
 const CACHE = 'jp-trip-%s';
@@ -494,7 +618,7 @@ def build(xlsx='src/table.xlsx'):
     man, names, files = unbundle(html)
     app_uid = names[APP]
     app = files[app_uid].decode()
-    for old, new in LOGIC + BOOK_FIX + UI_APP + PALETTE_APP:
+    for old, new in LOGIC + UI_APP + PALETTE_APP + BOOK_UI + APP_UI2:
         app = patch(app, old, new)
     ds_uid = next(u for u, b in files.items() if b.startswith(b'/* @ds-bundle'))
     ds = files[ds_uid].decode()
@@ -507,8 +631,8 @@ def build(xlsx='src/table.xlsx'):
         assert k, f'в {n} не нашлось ссылок на дизайн-систему — проверьте выгрузку'
     app = files[app_uid].decode()
     card = files[names[CARD]].decode()
-    for old, new in UI_CARD + PALETTE_CARD:
-        card = patch(card, old, new)
+    for old, new, *n in UI_CARD + PALETTE_CARD + CARD_UI:
+        card = patch(card, old, new, *n)
     files[names[CARD]] = card.encode()
     cj = json.loads((ROOT / 'src/copy.json').read_text(encoding='utf-8'))
     copy = Copy(cj.get('replace', {}), cj.get('keep', []))
@@ -518,7 +642,11 @@ def build(xlsx='src/table.xlsx'):
     days = build_days(json.loads(m.group(1)), wf, wv, copy, report)
     check_wish(app, wf, wv, report)
     app = app[:m.start(1)] + json.dumps(days, ensure_ascii=False, separators=(',', ':')) + app[m.end(1):]
+    mb = re.search(r'^  static BOOK = \[\n.*?\n  \];$', app, re.M | re.S)
+    assert mb, 'в прототипе не найден static BOOK'
+    app = app[:mb.start()] + '  static BOOK = ' + json.dumps(bookings(days), ensure_ascii=False, separators=(',', ':')) + ';' + app[mb.end():]
     files[app_uid] = app.encode()
+    add_icons(files)
     out = rebundle(html, man, files)
     out = patch(out, '  <title>', HEAD + '  <title>')
     DIST.mkdir(exist_ok=True)

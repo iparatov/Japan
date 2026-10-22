@@ -1,0 +1,362 @@
+{
+ "_о_файле": "Брони для вкладки «Брони». Данные — из писем (сводка GPT по почте, 22.10.2026), подтверждений Booking.com и маршрутной квитанции Авиасейлс. Сюда не кладём PIN-коды, номера паспортов и электронных билетов, личные ссылки с ключом доступа (сайт публичный). day — индекс дня поездки: 0 = 30.10 … 10 = 09.11.",
+ "items": [
+  {
+   "id": "f1",
+   "kind": "flight",
+   "title": "Москва → Пекин → Токио",
+   "day": 0,
+   "s": "14:05",
+   "line": "Шереметьево → Пекин → Ханеда",
+   "cells": [
+    [
+     "ВЫЛЕТ",
+     "19:00",
+     "29.10"
+    ],
+    [
+     "ПРИЛЁТ",
+     "14:05",
+     "30.10"
+    ]
+   ],
+   "bookingNo": "MGP84B",
+   "show": "Паспорта на стойке регистрации China Southern",
+   "sender": "Авиасейлс · 24.07 · «Маршрутная квитанция»",
+   "st": "bought",
+   "noLabel": "Код брони",
+   "groupLabel": "ЧТ, 29.10 → ПТ, 30.10",
+   "segments": [
+    "CZ342 · 29.10 19:00 Шереметьево, терм. C → 07:45 Пекин Дасин",
+    "CZ647 · 09:45 Пекин Дасин → 14:05 Ханеда, терм. 3"
+   ],
+   "baggage": "На каждого: 2 × 23 кг, ручная кладь 8 кг"
+  },
+  {
+   "id": "k1",
+   "kind": "hotel",
+   "title": "APA Hotel Yamanote Otsuka Ekimae Tower",
+   "day": 0,
+   "endDay": 5,
+   "line": "Оцука, Токио · заезд с 15:00, выезд до 10:00",
+   "cells": [
+    [
+     "ЗАЕЗД",
+     "30.10"
+    ],
+    [
+     "ВЫЕЗД",
+     "04.11"
+    ],
+    [
+     "НОЧЕЙ",
+     "5"
+    ]
+   ],
+   "bookingNo": "6542075219",
+   "show": "Паспорта обоих и номер брони",
+   "seats": "2 взрослых · 1 номер",
+   "important": "До заезда пройти онлайн-регистрацию — ссылка в письме APA от 17.10.",
+   "sender": "Booking.com · 26.09 · «Обновлённое подтверждение»",
+   "url": "https://secure.booking.com/myreservations.html?bn=6542075219",
+   "urlLabel": "Открыть бронь в Booking",
+   "st": "bought",
+   "mapUrl": "https://www.google.com/maps/search/?api=1&query=APA%20Hotel%20Yamanote%20Otsuka%20Ekimae%20Tower%2C%20Toshima-ku%20Minami%20Otsuka%203-31-10%2C%20Tokyo"
+  },
+  {
+   "id": "k2",
+   "kind": "ticket",
+   "title": "Shibuya Sky",
+   "day": 2,
+   "s": "16:20",
+   "line": "Вход 16:20–16:39",
+   "cells": [
+    [
+     "ВХОД",
+     "16:20"
+    ]
+   ],
+   "bookingNo": "00396-2026-1018-8100-2770-0009",
+   "show": "QR из письма Webket на входе — по одному на человека",
+   "sender": "Webket · 18.10 · «[Webket] Thank you for your purchase»",
+   "url": "https://webket.jp/pc/member/top?fc=00396&ac=8001&lang=1",
+   "urlLabel": "Открыть билеты в Webket",
+   "st": "bought"
+  },
+  {
+   "id": "k3",
+   "kind": "train",
+   "title": "Fuji Excursion 3",
+   "day": 5,
+   "s": "07:30",
+   "e": "09:11",
+   "line": "Shinjuku → Shimoyoshida · 07:30–09:11",
+   "cells": [
+    [
+     "ОТПРАВЛЕНИЕ",
+     "07:30"
+    ],
+    [
+     "ПРИБЫТИЕ",
+     "09:11"
+    ]
+   ],
+   "bookingNo": "SH000002067258",
+   "show": "QR из My Page → бумажные билеты в автомате JR с логотипом Eki-net",
+   "important": "Получить бумажные билеты заранее, на это 20–30 минут.",
+   "sender": "JAPAN BULLET TRAIN · 04.10 · «Your Tickets Have Been Issued»",
+   "url": "https://japantravel.navitime.com/en/booking/jr/mypage/login?reserveId=SH000002067258",
+   "urlLabel": "Открыть QR в My Page",
+   "st": "bought"
+  },
+  {
+   "id": "k4",
+   "kind": "bus",
+   "title": "Kawaguchiko → Mishima",
+   "day": 5,
+   "s": "15:00",
+   "e": "16:30",
+   "line": "Kawaguchiko Station → Mishima Station North Exit · 15:00–16:30",
+   "cells": [
+    [
+     "ОТПРАВЛЕНИЕ",
+     "15:00"
+    ],
+    [
+     "ПРИБЫТИЕ",
+     "16:30"
+    ]
+   ],
+   "bookingNo": "3029512 · 3208424",
+   "show": "Билет в Ticket Details на Fujiyama Connect",
+   "important": "Заранее открыть Ticket Details и сохранить билет.",
+   "sender": "Fujiyama Connect · 06.10 · «Confirmation of reservation»",
+   "url": "https://www.fujiyamaconnect.jp/signin",
+   "urlLabel": "Открыть билет в Fujiyama Connect",
+   "st": "bought"
+  },
+  {
+   "id": "k5",
+   "kind": "train",
+   "title": "Hikari 721",
+   "day": 5,
+   "s": "17:46",
+   "e": "19:37",
+   "line": "Mishima → Kyoto · 17:46–19:37",
+   "cells": [
+    [
+     "ОТПРАВЛЕНИЕ",
+     "17:46"
+    ],
+    [
+     "ВАГОН",
+     "12"
+    ],
+    [
+     "МЕСТА",
+     "19-E · 18-A"
+    ]
+   ],
+   "bookingNo": "1539368858036877",
+   "show": "QR на турникете — по одному на человека (Trip.com или письмо)",
+   "sender": "Trip.com · 06.10 · «Подтверждение бронирования Trip.com: Мисима → Киото»",
+   "st": "bought"
+  },
+  {
+   "id": "k6",
+   "kind": "hotel",
+   "title": "Hotel Hokke Club Kyoto",
+   "day": 5,
+   "endDay": 8,
+   "line": "Киото · заезд с 15:00, выезд до 10:00",
+   "cells": [
+    [
+     "ЗАЕЗД",
+     "04.11"
+    ],
+    [
+     "ВЫЕЗД",
+     "07.11"
+    ],
+    [
+     "НОЧЕЙ",
+     "3"
+    ]
+   ],
+   "bookingNo": "6040916606",
+   "show": "Паспорта обоих и номер брони",
+   "seats": "2 взрослых · 1 номер",
+   "sender": "Booking.com · 26.09 · «Обновлённое подтверждение»",
+   "url": "https://secure.booking.com/myreservations.html?bn=6040916606",
+   "urlLabel": "Открыть бронь в Booking",
+   "st": "bought",
+   "mapUrl": "https://www.google.com/maps/search/?api=1&query=Hotel%20Hokke%20Club%20Kyoto%2C%20Shimogyo-ku%20Higashi%20Shiokojicho%20579-16%2C%20Kyoto"
+  },
+  {
+   "id": "k8",
+   "kind": "train",
+   "title": "Kintetsu №807",
+   "day": 8,
+   "s": "08:00",
+   "e": "08:34",
+   "line": "Kintetsu Kyoto → Kintetsu-Nara · 08:00–08:34",
+   "cells": [
+    [
+     "ОТПРАВЛЕНИЕ",
+     "08:00"
+    ],
+    [
+     "ВАГОН",
+     "6"
+    ],
+    [
+     "МЕСТА",
+     "3A · 3B"
+    ]
+   ],
+   "bookingNo": "A58507",
+   "show": "Электронный билет на сайте Kintetsu",
+   "important": "Базовый проезд оплачивается отдельно — Suica/PASMO.",
+   "sender": "Kintetsu Railway · 07.10 · «Results of Limited Express ticket purchase»",
+   "url": "https://www.ticket.kintetsu.co.jp/vs/en/T/TZZ/TZZ10.do?op=tDisplayVisitorMenu#vs-ticketinfo",
+   "urlLabel": "Открыть e-ticket Kintetsu",
+   "st": "bought"
+  },
+  {
+   "id": "k9",
+   "kind": "train",
+   "title": "Kintetsu №1606",
+   "day": 8,
+   "s": "16:25",
+   "e": "17:01",
+   "line": "Kintetsu-Nara → Kyoto · 16:25–17:01",
+   "cells": [
+    [
+     "ОТПРАВЛЕНИЕ",
+     "16:25"
+    ],
+    [
+     "ВАГОН",
+     "5"
+    ],
+    [
+     "МЕСТА",
+     "3A · 3B"
+    ]
+   ],
+   "bookingNo": "A56932",
+   "show": "Электронный билет на сайте Kintetsu",
+   "important": "Базовый проезд оплачивается отдельно — Suica/PASMO.",
+   "sender": "Kintetsu Railway · 07.10 · «Results of Limited Express ticket purchase»",
+   "url": "https://www.ticket.kintetsu.co.jp/vs/en/T/TZZ/TZZ10.do?op=tDisplayVisitorMenu#vs-ticketinfo",
+   "urlLabel": "Открыть e-ticket Kintetsu",
+   "st": "bought"
+  },
+  {
+   "id": "k10",
+   "kind": "train",
+   "title": "Nozomi 178",
+   "day": 8,
+   "s": "17:30",
+   "e": "19:45",
+   "line": "Kyoto → Tokyo · 17:30–19:45",
+   "cells": [
+    [
+     "ОТПРАВЛЕНИЕ",
+     "17:30"
+    ],
+    [
+     "ВАГОН",
+     "5"
+    ],
+    [
+     "МЕСТА",
+     "10-D · 10-E"
+    ]
+   ],
+   "bookingNo": "1539368899415193",
+   "show": "QR на турникете — по одному на человека (Trip.com или письмо)",
+   "sender": "Trip.com · 11.10 · «Подтверждение бронирования Trip.com: Киото → Токио»",
+   "st": "bought"
+  },
+  {
+   "id": "k11",
+   "kind": "hotel",
+   "title": "Hop Inn Tokyo Iidabashi",
+   "day": 8,
+   "endDay": 10,
+   "line": "Иидабаси, Токио · заезд 15:00–00:00, выезд до 11:00",
+   "cells": [
+    [
+     "ЗАЕЗД",
+     "07.11"
+    ],
+    [
+     "ВЫЕЗД",
+     "09.11"
+    ],
+    [
+     "НОЧЕЙ",
+     "2"
+    ]
+   ],
+   "bookingNo": "5739890525",
+   "show": "Паспорта обоих и номер брони",
+   "seats": "2 взрослых · 1 номер",
+   "sender": "Booking.com · 22.09",
+   "url": "https://secure.booking.com/myreservations.html?bn=5739890525",
+   "urlLabel": "Открыть бронь в Booking",
+   "st": "bought",
+   "mapUrl": "https://www.google.com/maps/search/?api=1&query=Hop%20Inn%20Tokyo%20Iidabashi%2C%20Shinjuku-ku%20Shimomiyabi-cho%202-25%2C%20Tokyo"
+  },
+  {
+   "id": "k12",
+   "kind": "ticket",
+   "title": "teamLab Planets TOKYO",
+   "day": 9,
+   "s": "13:30",
+   "line": "Вход 13:30",
+   "cells": [
+    [
+     "ВХОД",
+     "13:30"
+    ]
+   ],
+   "show": "QR в My Tickets по ссылке из письма",
+   "important": "QR появится 08.11 после 00:00 — открыть My Tickets с интернетом и сохранить.",
+   "sender": "teamLab Planets TOKYO · 02.09 · «Ticket Purchase Completion Notification»",
+   "st": "bought"
+  },
+  {
+   "id": "f2",
+   "kind": "flight",
+   "title": "Токио → Доха → Москва",
+   "day": 10,
+   "s": "16:55",
+   "line": "Нарита → Доха → Шереметьево",
+   "cells": [
+    [
+     "ВЫЛЕТ",
+     "16:55",
+     "09.11"
+    ],
+    [
+     "ПРИЛЁТ",
+     "07:00",
+     "10.11"
+    ]
+   ],
+   "bookingNo": "7CYWIB",
+   "show": "Паспорта на стойке регистрации Qatar Airways",
+   "important": "Авиакомпания меняла рейс (письмо Авиасейлс 06.10) — сверить время.",
+   "sender": "Авиасейлс · 06.10 · «Рейс изменили — нужно ваше решение»",
+   "st": "bought",
+   "noLabel": "Код брони",
+   "segments": [
+    "QR809 · 09.11 16:55 Нарита, терм. 2 → 23:05 Доха",
+    "QR337 · 10.11 00:35 Доха → 07:00 Шереметьево, терм. C"
+   ],
+   "baggage": "На каждого: 1 × 25 кг, ручная кладь 7 кг"
+  }
+ ]
+}

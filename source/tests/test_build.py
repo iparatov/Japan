@@ -181,3 +181,111 @@ class PaletteC(BuiltData):
 
     def test_chip(self):
         self.assertIn("background: active ? 'var(--primary)'", self.ds)
+
+
+class Bookings(BuiltData):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        import json, re
+        cls.book = json.loads(re.search(r'^  static BOOK = (.*);$', cls.app, re.M).group(1))
+
+    def test_composition(self):
+        titles = [b['title'] for b in self.book]
+        self.assertEqual(sum(b['kind'] == 'flight' for b in self.book), 2)
+        for gone in ('Koun-tei', 'Skyliner', 'Багаж'):
+            self.assertFalse(any(gone in t for t in titles), gone)
+
+    def test_every_booking_has_sender(self):
+        for b in self.book:
+            self.assertTrue(b.get('sender'), b['title'])
+
+    def test_no_secrets(self):
+        import json
+        t = json.dumps(self.book, ensure_ascii=False)
+        for s in ('PIN', '9458', '7613', '8927', 'regicard', 'mytickets', '771810581', '773115362'):
+            self.assertNotIn(s, t)
+
+    def test_every_hotel_has_map(self):
+        for b in self.book:
+            if b['kind'] == 'hotel':
+                self.assertTrue(b.get('mapUrl', '').startswith('https://www.google.com/maps/'), b['title'])
+
+
+class Cleanup(BuiltData):
+    def test_no_service_lines(self):
+        for src in (self.app, self.card):
+            for s in ('нужна сеть', 'Откроется в Google Maps', 'появится связь', 'при наличии сети'):
+                self.assertNotIn(s, src)
+
+    def test_cond_merged(self):
+        self.assertNotIn('"cond":"', self.text.replace(' ', '') .split('"planB"')[0][:0] + ''.join(
+            __import__('json').dumps({k: v for k, v in it.items() if k != 'planB'}, ensure_ascii=False)
+            for d in self.days for it in d['items']))
+
+    def test_card_text(self):
+        it = next(i for d in self.days for i in d['items'] if i['title'] == 'Ужин — MASUMI Ginza 7-chome')
+        self.assertEqual(it['note'], '3-й этаж Ginza Lion Building.')
+        kura = next(i for d in self.days for i in d['items'] if i['title'] == 'Kura Sushi Global Flagship Harajuku')
+        self.assertEqual(kura['note'], 'Заранее встать в электронную очередь в приложении Kura Sushi.')
+
+    def test_icons_offline(self):
+        html = (build.DIST / 'index.html').read_text(encoding='utf-8')
+        man, names, files = build.unbundle(html)
+        icons = next(b for b in files.values() if b.startswith(b'window.__DS_ICONS={')).decode()
+        for n in ('plane', 'hotel', 'undo-2'):
+            self.assertIn('"%s":"data:image' % n, icons)
+
+
+class BookingCardV2(Bookings):
+    """Фиксы после разбора дизайна «Броней» (22.10)."""
+    def by(self, i): return next(b for b in self.book if b['id'] == i)
+
+    def test_no_guest_cells(self):
+        for b in self.book:
+            self.assertNotIn('ГОСТЕЙ', [c[0] for c in b['cells']], b['title'])
+
+    def test_cells_by_kind(self):
+        keys = lambda i: [c[0] for c in self.by(i)['cells']]
+        self.assertEqual(keys('k5'), ['ОТПРАВЛЕНИЕ', 'ВАГОН', 'МЕСТА'])      # Hikari
+        self.assertEqual(keys('k3'), ['ОТПРАВЛЕНИЕ', 'ПРИБЫТИЕ'])            # Fuji Excursion, мест в данных нет
+        self.assertEqual(keys('k4'), ['ОТПРАВЛЕНИЕ', 'ПРИБЫТИЕ'])            # автобус
+        self.assertEqual(keys('k2'), ['ВХОД'])
+        self.assertEqual(keys('k1'), ['ЗАЕЗД', 'ВЫЕЗД', 'НОЧЕЙ'])
+        self.assertEqual(keys('f1'), ['ВЫЛЕТ', 'ПРИЛЁТ'])
+
+    def test_flight_cells_time_big_date_small(self):
+        self.assertEqual(self.by('f1')['cells'], [['ВЫЛЕТ', '19:00', '29.10'], ['ПРИЛЁТ', '14:05', '30.10']])
+        self.assertEqual(self.by('f2')['cells'], [['ВЫЛЕТ', '16:55', '09.11'], ['ПРИЛЁТ', '07:00', '10.11']])
+
+    def test_number_label(self):
+        for b in self.book:
+            if b.get('bookingNo'):
+                self.assertEqual(b.get('noLabel', 'Номер брони'), 'Код брони' if b['kind'] == 'flight' else 'Номер брони', b['title'])
+
+    def test_url_labels(self):
+        for b in self.book:
+            if b.get('url'):
+                self.assertRegex(b['urlLabel'], r'^Открыть (бронь|билеты?|QR|e-ticket) ', b['title'])
+
+    def test_flight_segments_and_baggage(self):
+        for i in ('f1', 'f2'):
+            b = self.by(i)
+            self.assertEqual(len(b['segments']), 2)
+            self.assertTrue(b['baggage'])
+            self.assertNotIn('seats', b)
+
+    def test_outbound_group_label(self):
+        self.assertEqual(self.by('f1')['groupLabel'], 'ЧТ, 29.10 → ПТ, 30.10')
+
+    def test_sender_one_line(self):
+        for b in self.book:
+            self.assertRegex(b['sender'], r'^[^·]+ · \d\d\.\d\d( · «[^»]+»)?$', b['title'])
+
+    def test_hotel_show(self):
+        for i in ('k1', 'k6', 'k11'):
+            self.assertEqual(self.by(i)['show'], 'Паспорта обоих и номер брони')
+
+    def test_copy_is_icon_button(self):
+        self.assertIn('aria-label="{{ b.copyAria }}"', self.app)
+        self.assertNotIn('{{ b.copyLabel }}', self.app)

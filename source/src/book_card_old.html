@@ -1,0 +1,5 @@
+                <sc-if value="{{ b.hasNote }}"><span style="font:var(--type-small); color:var(--text-body)">{{ b.note }}</span></sc-if>
+                <div data-press="" style="display:flex; flex-direction:column; gap:6px">
+                  <x-import component-from-global-scope="DesignSystem_30197c.Button" variant="secondary" size="md" full-width="{{ true }}" disabled="{{ offline }}" hint-size="100%,44px"><x-import component-from-global-scope="DesignSystem_30197c.Icon" name="external-link" size="{{ 16 }}" hint-size="16px,16px"></x-import>{{ b.cta }}</x-import>
+                  <span style="display:flex; align-items:center; justify-content:center; gap:6px; font:var(--type-caption); color:var(--text-quiet)"><x-import component-from-global-scope="DesignSystem_30197c.Icon" name="{{ netIcon }}" size="{{ 13 }}" hint-size="13px,13px"></x-import>{{ b.net }}</span>
+                </div>

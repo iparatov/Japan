@@ -77,6 +77,50 @@ await t('30.10 у Kuramu видно время пешком от ICHIRAN', async
   await c.close();
 });
 
+
+const bookings = async p => { await p.getByText('Брони', { exact: false }).last().click(); await p.waitForTimeout(800); };
+
+await t('брони 04.11: прошедшие свёрнуты внизу, сначала текущие', async () => {
+  const { p, c } = await open('2026-11-04T12:00:00+09:00');
+  await bookings(p);
+  const tx = await text(p);
+  assert.ok(/Прошедшие · \d+/.test(tx), 'нет строки «Прошедшие · N»');
+  assert.ok(!tx.includes('Shibuya Sky'), 'прошедшая бронь Shibuya Sky видна без раскрытия');
+  assert.ok(tx.indexOf('Kawaguchiko → Mishima') < tx.indexOf('Прошедшие'), 'текущие брони не выше прошедших');
+  await p.getByText(/Прошедшие · \d+/).click(); await p.waitForTimeout(500);
+  assert.ok((await text(p)).includes('Shibuya Sky'), 'после раскрытия прошедших Shibuya Sky не видна');
+  await c.close();
+});
+
+await t('брони: «КУПЛЕНО» и «Куплено N из N» не показываются, когда всё куплено', async () => {
+  const { p, c } = await open('2026-10-25T12:00:00+09:00');
+  await bookings(p);
+  const tx = await text(p);
+  assert.ok(!/КУПЛЕНО/.test(tx), 'метка «КУПЛЕНО» на карточках');
+  assert.ok(!/Куплено \d+ из \d+/.test(tx), 'строка «Куплено N из N»');
+  await c.close();
+});
+
+await t('брони: перелёт туда — сегменты и багаж', async () => {
+  const { p, c } = await open('2026-10-25T12:00:00+09:00');
+  await bookings(p);
+  const tx = await text(p);
+  assert.ok(tx.includes('ЧТ, 29.10 → ПТ, 30.10'), 'нет подписи группы перелёта');
+  assert.ok(/CZ342/.test(tx) && /CZ647/.test(tx) && /Багаж/.test(tx), 'нет сегментов или багажа');
+  await c.close();
+});
+
+
+await t('брони: подписи кнопок не обрезаются', async () => {
+  const { p, c } = await open('2026-10-25T12:00:00+09:00');
+  await bookings(p);
+  const cut = await p.evaluate(() => [...document.querySelectorAll('button')].filter(b => /Открыть|На карте/.test(b.innerText) && b.getBoundingClientRect().width > 0)
+    .filter(b => b.scrollWidth > b.clientWidth + 1 || [...b.querySelectorAll('*')].some(x => { const r = x.getBoundingClientRect(), o = b.getBoundingClientRect(); return r.width && (r.left < o.left - 1 || r.right > o.right + 1); }))
+    .map(b => b.innerText.trim()));
+  assert.deepEqual(cut, [], 'обрезаны: ' + cut.join(', '));
+  await c.close();
+});
+
 await t('офлайн: после первого открытия работает без сети', async () => {
   const http = await import('node:http'); const fs = await import('node:fs');
   const dir = path.dirname(path.resolve(process.argv[2] || 'dist/index.html'));
