@@ -161,16 +161,22 @@ class NewRows(BuiltData):
                     self.assertEqual(i['type'], 'food', i['title'])
 
 
-class PaletteA(BuiltData):
-    """Вариант A из Color Study: выбранный день и чипы — --primary, «Сделано» — --chart-2, шапка дня — --accent."""
-    def test_day_pill(self):
-        self.assertIn("bg: selected ? 'var(--primary)'", self.app)
-        self.assertIn('background:var(--primary); transform:translateX', self.app)
+class PaletteC(BuiltData):
+    """Вариант C из Color Study: цвет города на дне, кольце, линии таймлайна и «сейчас»; чипы — --primary, «Сделано» — --chart-2."""
+    def test_city_on_root(self):
+        self.assertIn('style="--city:{{ cityColor }};', self.app)
+        self.assertIn('"kyoto": "var(--chart-5)"', self.app)
 
-    def test_day_head(self):
-        self.assertIn('background:var(--accent); border-radius:var(--r-card); padding:18px 16px 18px 20px', self.app)
+    def test_day_pill_and_ring(self):
+        self.assertIn("bg: selected ? 'var(--city-pill)'", self.app)
+        self.assertEqual(self.app.count('stroke:var(--city); stroke-width:6'), 2)
 
-    def test_done(self):
+    def test_day_head_no_fill(self):
+        self.assertIn('background:var(--surface-card); border-radius:var(--r-card); padding:18px 16px 18px 20px', self.app)
+
+    def test_card(self):
+        self.assertIn('width:1px; background:var(--city, var(--line-hairline))', self.card)
+        self.assertIn("nodeBg: current ? 'var(--city, var(--primary))'", self.card)
         self.assertIn("checkBg: done ? 'var(--chart-2)'", self.card)
 
     def test_chip(self):

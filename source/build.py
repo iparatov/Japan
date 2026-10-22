@@ -398,20 +398,41 @@ UI_CARD = [
 ]
 CARD = 'Route%20Card.dc.html'
 
-# Цвет — вариант A из Color Study (22.10): только акцент бренда, нейтрали без изменений.
-# Выбранный день и активные чипы — --primary, «Сделано» — --chart-2, шапка дня — --accent.
+# Цвет — вариант C из Color Study (22.10): цвет города на выбранном дне, кольце прогресса,
+# линии таймлайна и подсветке «сейчас»: Токио — --chart-1, Киото — --chart-5, Нара — --chart-3.
+# Общее для вариантов: активные чипы — --primary, «Сделано» — --chart-2. Шапка дня — без подложки.
+CITY = ['tokyo', 'tokyo', 'tokyo', 'tokyo', 'tokyo', 'tokyo', 'kyoto', 'kyoto', 'nara', 'tokyo', 'tokyo']  # по дням 30.10–09.11, как в Color Study
+CITY_COLOR = {'tokyo': 'var(--chart-1)', 'kyoto': 'var(--chart-5)', 'nara': 'var(--chart-3)'}
+# Плашка выбранного дня в светлой теме: подпись дня недели мелкая, нужен контраст ≥ 4,5:1.
+# Белый на --chart-5 — 4,36:1, поэтому розовый чуть темнее (5,0:1); на оранжевом --chart-3 белый — 3,2:1,
+# поэтому текст тёмный (4,8:1). В тёмной теме цвета светлые, текст --background проходит и так.
+PILL_LIGHT = {'tokyo': 'var(--chart-1)', 'kyoto': 'color-mix(in oklab, var(--chart-5) 95%, black)', 'nara': 'var(--chart-3)'}
+PILL_FG_LIGHT = {'tokyo': 'var(--background)', 'kyoto': 'var(--background)', 'nara': 'var(--foreground)'}
 PALETTE_APP = [
-    ('background:var(--foreground); transform:translateX', 'background:var(--primary); transform:translateX'),
-    ("bg: selected ? 'var(--foreground)' : 'transparent',", "bg: selected ? 'var(--primary)' : 'transparent',"),
-    ("fg: selected ? 'var(--background)' : 'var(--text-strong)',", "fg: selected ? 'var(--primary-foreground)' : 'var(--text-strong)',"),
-    ("wdFg: selected ? 'var(--background)'", "wdFg: selected ? 'var(--primary-foreground)'"),
-    ("dot: today ? (selected ? 'var(--background)'", "dot: today ? (selected ? 'var(--primary-foreground)'"),
-    ('align-items:center; background:var(--surface-card); border-radius:var(--r-card); padding:18px 16px 18px 20px',
-     'align-items:center; background:var(--accent); border-radius:var(--r-card); padding:18px 16px 18px 20px'),
+    ('<div class="{{ themeClass }}" style="font-family:var(--font-sans);',
+     '<div class="{{ themeClass }}" data-city="{{ cityKey }}" style="--city:{{ cityColor }}; --city-pill:{{ cityPill }}; --city-pill-fg:{{ cityPillFg }}; font-family:var(--font-sans);'),
+    ("themeClass: dark ? 'dark' : '',",
+     "themeClass: dark ? 'dark' : '', cityKey: %s[S.day] || 'tokyo', cityColor: %s[%s[S.day] || 'tokyo'],"
+     " cityPill: dark ? %s[%s[S.day] || 'tokyo'] : %s[%s[S.day] || 'tokyo'],"
+     " cityPillFg: dark ? 'var(--background)' : %s[%s[S.day] || 'tokyo'],"
+     % (json.dumps(CITY), json.dumps(CITY_COLOR), json.dumps(CITY), json.dumps(CITY_COLOR), json.dumps(CITY),
+        json.dumps(PILL_LIGHT), json.dumps(CITY), json.dumps(PILL_FG_LIGHT), json.dumps(CITY))),
+    ('background:var(--foreground); transform:translateX', 'background:var(--city-pill); transform:translateX'),
+    ("bg: selected ? 'var(--foreground)' : 'transparent',", "bg: selected ? 'var(--city-pill)' : 'transparent',"),
+    ("fg: selected ? 'var(--background)' : 'var(--text-strong)',", "fg: selected ? 'var(--city-pill-fg)' : 'var(--text-strong)',"),
+    ("wdFg: selected ? 'var(--background)'", "wdFg: selected ? 'var(--city-pill-fg)'"),
+    ("dot: today ? (selected ? 'var(--background)'", "dot: today ? (selected ? 'var(--city-pill-fg)'"),
+    ('style="stroke:var(--primary); stroke-width:6; stroke-linecap:{{ ringCap }}', 'style="stroke:var(--city); stroke-width:6; stroke-linecap:{{ ringCap }}'),
+    ('style="stroke:var(--primary); stroke-width:6; stroke-linecap:{{ g.cap }}', 'style="stroke:var(--city); stroke-width:6; stroke-linecap:{{ g.cap }}'),
 ]
-PALETTE_CARD = [
+PALETTE_CARD = [  # --city приходит от корня приложения (CSS-переменная наследуется)
+    ('width:1px; background:var(--line-hairline)', 'width:1px; background:var(--city, var(--line-hairline))'),
+    ("const cardShadow = current ? 'inset 0 0 0 2px var(--primary), var(--shadow-popover)' : 'none';",
+     "const cardShadow = current ? 'inset 0 0 0 2px var(--city, var(--primary)), var(--shadow-popover)' : 'none';"),
+    ("nodeBg: current ? 'var(--primary)'", "nodeBg: current ? 'var(--city, var(--primary))'"),
+    ("nodeRing: current ? 'var(--primary)'", "nodeRing: current ? 'var(--city, var(--primary))'"),
+    ("moveRing: current ? 'var(--primary)'", "moveRing: current ? 'var(--city, var(--primary))'"),
     ("checkBg: done ? 'var(--foreground)' : 'transparent',", "checkBg: done ? 'var(--chart-2)' : 'transparent',"),
-    ("checkFg: done ? 'var(--background)' : 'var(--text-quiet)',", "checkFg: done ? 'var(--background)' : 'var(--text-quiet)',"),
     ("checkRing: done ? 'var(--foreground)' : 'var(--line-field)',", "checkRing: done ? 'var(--chart-2)' : 'var(--line-field)',"),
 ]
 PALETTE_DS = [  # чип фильтра (компонент дизайн-системы)
