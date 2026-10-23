@@ -2,7 +2,7 @@
 
 python3 build.py [src/table.xlsx]
 """
-import base64, gzip, hashlib, json, re, sys
+import base64, gzip, hashlib, json, re, sys, urllib.parse
 from pathlib import Path
 
 ROOT = Path(__file__).parent
@@ -159,7 +159,7 @@ def read_restaurants(wf, wv):
                    book=book, bookText=book, walk=C(r, 'Пешком от основного')[0] if 'Пешком от основного' in hdr else '',
                    rating=rating if re.match(r'\d', rating) else '', price=price(C(r, 'Средний чек, ¥ / чел.')[0]),
                    about=about, hours=hours, how=C(r, 'Что сделать / влияние альтернативы')[0] if name.lstrip().startswith('↳') else '',
-                   mapUrl=C(r, 'Google Maps')[1], tabelogUrl=C(r, 'Tabelog')[1])
+                   mapUrl=maps_url(C(r, 'Google Maps')[1], name), tabelogUrl=C(r, 'Tabelog')[1])
         if 'только курс' in book.lower() and '17:00' in book: row['bookStatus'] = 'Только курс после 17:00'
         groups.setdefault(row['ref'], []).append(row)
     return {ref: rest_group(rows) for ref, rows in groups.items()}
@@ -228,6 +228,16 @@ def find_row(it, rows, date, used):
     return None
 
 
+def maps_url(url, name):
+    """Ссылка для кнопок «На карте» / «Маршрут»: только Google Maps, в виде, который открывает iOS-приложение.
+    maps/place/?q=place_id:… приложение ищет как текст — переводим в Maps URLs API. Не карта (сайт перевозчика,
+    поиск билетов) — не кнопка «Маршрут», убираем."""
+    if not url: return None
+    m = re.search(r'[?&]q=place_id:([\w-]+)', url)
+    if m: return 'https://www.google.com/maps/search/?api=1&query=%s&query_place_id=%s' % (urllib.parse.quote(name.split(' — ')[-1]), m.group(1))
+    return url if re.match(r'https://(www\.google\.com/maps|maps\.app\.goo\.gl/)', url) else None
+
+
 def item_from_row(r, v, it, copy, report):
     """Обновляет изменчивые поля пункта из строки таблицы; структуру (тип, план Б) берёт из прототипа."""
     it = dict(it) if it else {'id': 'r%d' % r, 'type': classify(v)}
@@ -238,8 +248,10 @@ def item_from_row(r, v, it, copy, report):
         t = copy(v[k][0])
         if t: it[k] = t
         else: it.pop(k, None)
-    url = v['link'][1] or v['title'][1]
-    if url: it['routeUrl' if it['type'] == 'move' else 'mapUrl'] = url
+    url = maps_url(v['link'][1] or v['title'][1], clean_title(v['title'][0]))
+    key = 'routeUrl' if it['type'] == 'move' else 'mapUrl'
+    if url: it[key] = url
+    else: it.pop(key, None)  # не оставлять ссылку из прототипа
     if it['type'] == 'move' and v['line'][0] not in DASH: it['line'] = v['line'][0]
     return it
 

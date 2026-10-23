@@ -295,3 +295,30 @@ class SenderCopy(Bookings):
     def test_sender_copy_button(self):
         self.assertIn('aria-label="{{ b.senderAria }}"', self.app)
         self.assertIn('onClick="{{ b.copySender }}"', self.app)
+
+
+class Links(BuiltData):
+    """Аудит ссылок 23.10: всё, что открывается кнопками «На карте» / «Маршрут», должно открываться в приложении Google Maps."""
+    def urls(self, key):
+        return [(i['title'], i[key]) for d in self.days for i in d['items'] + (d.get('alt') or {}).get('items', []) if i.get(key)]
+
+    def test_place_id_link_rewritten_to_maps_api(self):
+        # ссылка вида maps/place/?q=place_id:… в iOS-приложении ищет текст «place_id:…» и ничего не находит
+        self.assertEqual(build.maps_url('https://www.google.com/maps/place/?q=place_id:ChIJ85aGJXGNGGAR_vU9dqvkkB4', 'APA Hotel'),
+                         'https://www.google.com/maps/search/?api=1&query=APA%20Hotel&query_place_id=ChIJ85aGJXGNGGAR_vU9dqvkkB4')
+        for t, u in self.urls('mapUrl') + self.urls('routeUrl'):
+            self.assertNotIn('place_id:', u, t)
+
+    def test_map_buttons_open_google_maps(self):
+        for t, u in self.urls('mapUrl') + self.urls('routeUrl'):
+            self.assertRegex(u, r'^https://(www\.google\.com/maps|maps\.app\.goo\.gl/)', t)
+
+    def test_backup_restaurant_map_links(self):
+        for d in self.days:
+            for i in d['items']:
+                for b in i.get('backups', []):
+                    if b.get('mapUrl'): self.assertRegex(b['mapUrl'], r'^https://(www\.google\.com/maps|maps\.app\.goo\.gl/)', b['name'])
+
+    def test_place_id_fallback_query_is_place_name(self):
+        u = build.maps_url('https://www.google.com/maps/place/?q=place_id:X', 'Заселение и короткий отдых — APA Hotel')
+        self.assertIn('query=APA%20Hotel&', u)
