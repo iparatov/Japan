@@ -513,6 +513,7 @@ CARD_UI = [
  ]
 ]
 APP_UI2 = [
+ ["toTop: () => { const sc = this.scRef.current; if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); },", "toTop: () => { const sc = this.scRef.current; if (sc) sc.scrollTo({ top: 0, behavior: this.rm ? 'auto' : 'smooth' }); },"],
  ["name=\"wifi\" size=\"{{ 13 }}\" hint-size=\"13px,13px\"></x-import>нужна сеть</span>", "name=\"wifi\" size=\"{{ 13 }}\" hint-size=\"13px,13px\"></x-import>онлайн</span>"],
  [
   ">На сайте ↗ · нужна сеть</x-import>",
@@ -525,6 +526,71 @@ APP_UI2 = [
  [
   "try { navigator.clipboard && navigator.clipboard.writeText(b.bookingNo); } catch (e) {}",
   "try { navigator.clipboard && navigator.clipboard.writeText(b.bookingNo).catch(() => {}); } catch (e) {}"
+ ]
+]
+
+# ---------- вишлист: «Избранное» (26.10) ----------
+# Вместо режима «Правка» — контурная звезда на каждой карточке рядом с кружком «куплено»; «Обязательно» → «Избранное».
+WISH_FAV = [
+ [
+  "<button onClick=\"{{ enterEdit }}\" style=\"min-height:44px; padding:0 10px; border:none; border-radius:var(--r-control); background:transparent; color:var(--accent-foreground); font:var(--type-small); font-weight:600; letter-spacing:var(--tracking-normal); cursor:pointer\" style-active=\"background:var(--secondary)\">Правка</button>",
+  "",
+  1
+ ],
+ [
+  "<sc-if value=\"{{ w.must }}\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" style=\"display:inline-block; vertical-align:-1px; margin-right:4px; color:var(--primary)\"><path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" style=\"fill:currentColor; stroke:currentColor; stroke-width:2; stroke-linejoin:round\"></path></svg></sc-if>",
+  "",
+  2
+ ],
+ [
+  "<div style=\"display:grid; width:44px; height:44px\"><button onClick=\"{{ w.toggle }}\"",
+  "<div style=\"display:flex; flex-direction:row-reverse; flex:none\"><button onClick=\"{{ w.toggle }}\"",
+  2
+ ],
+ [
+  "const ED = !!S.wEdit;",
+  "const ED = false;  // режим «Правка» убран (26.10): звезда «Избранное» на каждой карточке",
+  1
+ ],
+ [
+  "starOp: ED ? 1 : 0, starPe: ED ? 'auto' : 'none',",
+  "starOp: 1, starPe: 'auto',",
+  1
+ ],
+ [
+  "edInertN: ED ? undefined : 'true', edHidN: ED ? undefined : 'true',",
+  "edInertN: undefined, edHidN: undefined,",
+  1
+ ],
+ [
+  "label: 'Обязательно ' + mustN,",
+  "label: 'Избранное ' + mustN,",
+  1
+ ],
+ [
+  "starAria: (mu ? 'Убрать из обязательных — ' : 'Отметить обязательным — ') + title,",
+  "starAria: (mu ? 'Убрать из избранного — ' : 'В избранное — ') + title,",
+  1
+ ],
+ [
+  "cardAria: (mu ? 'Обязательно. ' : '') + title,",
+  "cardAria: (mu ? 'В избранном. ' : '') + title,",
+  1
+ ],
+ [
+  "'Нет обязательных покупок'",
+  "'В избранном пусто'",
+  1
+ ],
+ [
+  "<div style=\"display:grid; grid-template-columns:minmax(0,1fr) 44px; column-gap:4px; align-items:start; padding:12px 6px 12px 16px\">",
+  "<div style=\"display:grid; grid-template-columns:minmax(0,1fr) 88px; column-gap:0; align-items:start; padding:12px 6px 12px 16px\">",
+  1
+ ],
+ [
+  "style=\"display:grid; grid-template-columns:minmax(0,1fr) 44px; column-gap:4px; align-items:center; min-height:56px; padding:0 6px 0 16px;",
+  "style=\"display:grid; grid-template-columns:minmax(0,1fr) 88px; column-gap:0; align-items:center; min-height:56px; padding:0 6px 0 16px;",
+  1
  ]
 ]
 
@@ -614,6 +680,13 @@ HEAD = """  <meta name="viewport" content="width=device-width, initial-scale=1, 
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <style>@media (prefers-color-scheme: dark) { body, #__bundler_thumbnail { background: #141414 !important; } }</style>
   <script>if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js');</script>
+  <script>/* На экране «Домой» (iOS) window.open открывает пустое окно, которое остаётся белым после перехода в Google Maps
+     или другое приложение (WebKit bug 199029). Там внешние ссылки открываем переходом: iOS сам отдаёт их приложению
+     или показывает поверх путеводителя. В обычном Safari — новая вкладка, как раньше. */
+  if (navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)) {
+    var _open = window.open;
+    window.open = function (u, t, f) { if (/^https?:/.test(String(u))) { location.href = u; return null; } return _open.call(window, u, t, f); };
+  }</script>
 """
 
 
@@ -630,8 +703,8 @@ def build(xlsx='src/table.xlsx'):
     man, names, files = unbundle(html)
     app_uid = names[APP]
     app = files[app_uid].decode()
-    for old, new in LOGIC + UI_APP + PALETTE_APP + BOOK_UI + APP_UI2:
-        app = patch(app, old, new)
+    for old, new, *n in LOGIC + UI_APP + PALETTE_APP + BOOK_UI + APP_UI2 + WISH_FAV:
+        app = patch(app, old, new, *n)
     ds_uid = next(u for u, b in files.items() if b.startswith(b'/* @ds-bundle'))
     ds = files[ds_uid].decode()
     for old, new in PALETTE_DS:

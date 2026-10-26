@@ -322,3 +322,9 @@ class Links(BuiltData):
     def test_place_id_fallback_query_is_place_name(self):
         u = build.maps_url('https://www.google.com/maps/place/?q=place_id:X', 'Заселение и короткий отдых — APA Hotel')
         self.assertIn('query=APA%20Hotel&', u)
+
+
+class Motion(BuiltData):
+    def test_to_top_respects_reduced_motion(self):
+        self.assertNotIn("sc.scrollTo({ top: 0, behavior: 'smooth' })", self.app)
+        self.assertIn("sc.scrollTo({ top: 0, behavior: this.rm ? 'auto' : 'smooth' })", self.app)

@@ -131,6 +131,51 @@ await t('брони: кнопка копирует отправителя пис
   await c.close();
 });
 
+
+await t('на экране Домой «На карте» открывает ссылку без window.open (иначе белый экран, WebKit 199029)', async () => {
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Tokyo' });
+  await ctx.addInitScript(`Object.defineProperty(navigator, 'standalone', { get: () => true }); window.__opened = []; const _o = window.open; window.open = function (u) { window.__opened.push(u); return null; };`);
+  let nav = null;
+  await ctx.route('https://www.google.com/maps/**', r => { nav = r.request().url(); r.abort(); });
+  await ctx.route('https://maps.app.goo.gl/**', r => { nav = r.request().url(); r.abort(); });
+  const { p, c } = await open('2026-10-30T17:00:00+09:00', { ctx });
+  await p.getByText('Hands Shinjuku', { exact: true }).first().click(); await p.waitForTimeout(600);
+  await p.getByText('На карте', { exact: true }).first().click(); await p.waitForTimeout(800);
+  assert.ok(nav, 'переход на Google Maps не произошёл');
+  const opened = await p.evaluate(() => window.__opened).catch(() => []);
+  assert.deepEqual(opened, [], 'ссылка ушла в window.open');
+  await c.close();
+});
+
+await t('в обычном Safari «На карте» по-прежнему открывает новую вкладку', async () => {
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Tokyo' });
+  await ctx.addInitScript(`window.__opened = []; window.open = function (u) { window.__opened.push(u); return null; };`);
+  const { p, c } = await open('2026-10-30T17:00:00+09:00', { ctx });
+  await p.getByText('Hands Shinjuku', { exact: true }).first().click(); await p.waitForTimeout(600);
+  await p.getByText('На карте', { exact: true }).first().click(); await p.waitForTimeout(300);
+  const opened = await p.evaluate(() => window.__opened);
+  assert.equal(opened.length, 1); assert.match(opened[0], /google\.com\/maps|maps\.app\.goo\.gl/);
+  await c.close();
+});
+
+
+await t('вишлист: звезда на карточке добавляет в «Избранное» без режима «Правка»', async () => {
+  const { p, c } = await open('2026-10-25T12:00:00+09:00');
+  await p.getByText('Вишлист', { exact: true }).last().click(); await p.waitForTimeout(700);
+  assert.equal(await p.getByText('Правка', { exact: true }).count(), 0, 'кнопка «Правка» осталась');
+  const star = p.locator('[aria-label^="В избранное — "]').first();
+  assert.ok(await star.isVisible(), 'нет видимой звезды на карточке');
+  const name = (await star.getAttribute('aria-label')).replace('В избранное — ', '');
+  await star.click(); await p.waitForTimeout(400);
+  assert.equal(await p.locator(`[aria-label="Убрать из избранного — ${name}"]`).getAttribute('aria-pressed'), 'true', 'звезда не закрасилась');
+  assert.ok(/Избранное 1/.test(await text(p)), 'нет чипа «Избранное 1»');
+  assert.ok(await p.locator('[aria-label^="Отметить купленным"]').first().isVisible(), 'пропал кружок «куплено»');
+  await p.reload(); await p.waitForTimeout(5000);
+  await p.getByText('Вишлист', { exact: true }).last().click(); await p.waitForTimeout(700);
+  assert.equal(await p.locator(`[aria-label="Убрать из избранного — ${name}"]`).count(), 1, 'избранное не сохранилось после перезагрузки');
+  await c.close();
+});
+
 await t('офлайн: после первого открытия работает без сети', async () => {
   const http = await import('node:http'); const fs = await import('node:fs');
   const dir = path.dirname(path.resolve(process.argv[2] || 'dist/index.html'));
